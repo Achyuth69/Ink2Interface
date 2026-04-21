@@ -394,12 +394,12 @@ export default function App() {
         {/* Sidebar */}
         <aside className={`
           bg-gray-950 border-r border-gray-800 flex-shrink-0
-          md:relative md:z-auto md:w-[360px] md:translate-x-0 md:block
+          md:static md:z-auto md:w-[360px] md:translate-x-0
           fixed top-[57px] left-0 bottom-0 z-30 w-[320px]
           transition-transform duration-300 ease-in-out
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         `}>
-          <div className="w-[320px] md:w-[360px] h-full flex flex-col overflow-hidden">
+          <div className="w-[320px] md:w-[360px] h-full flex flex-col">
             <Sidebar
               sourceMode={sourceMode} setSourceMode={setSourceMode}
               images={images} previews={previews}
