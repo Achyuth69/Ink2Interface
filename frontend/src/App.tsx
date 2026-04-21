@@ -80,8 +80,8 @@ function Sidebar({
   onReset, onGenerate,
 }: SidebarProps) {
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-4 flex flex-col gap-4 flex-1 overflow-y-auto">
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="p-4 flex flex-col gap-4 flex-1 overflow-y-auto min-h-0">
 
         {/* Source toggle */}
         <div>
@@ -399,7 +399,7 @@ export default function App() {
           transition-transform duration-300 ease-in-out
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         `}>
-          <div className="w-[320px] md:w-[360px] h-full overflow-y-auto flex flex-col">
+          <div className="w-[320px] md:w-[360px] h-full flex flex-col overflow-hidden">
             <Sidebar
               sourceMode={sourceMode} setSourceMode={setSourceMode}
               images={images} previews={previews}
