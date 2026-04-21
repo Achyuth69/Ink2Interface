@@ -1,79 +1,150 @@
 # Ink2Interface
 
-Convert screenshots & URLs into pixel-perfect HTML+CSS using Groq AI.
+**Convert any website screenshot or URL into pixel-perfect HTML + CSS — instantly.**
 
-## Deploy to Railway (2 services)
+Powered by Groq's ultra-fast AI vision models, Ink2Interface takes a screenshot or a URL and reconstructs the full frontend code in seconds. No design tools. No manual coding. Just paste and generate.
 
-### Step 1 — Push to GitHub
+---
 
-```bash
-cd Ink2Interface
-git init
-git add .
-git commit -m "initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/ink2interface.git
-git push -u origin main
-```
+## What It Does
 
-### Step 2 — Deploy Backend on Railway
-
-1. Go to [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo**
-2. Select your repo → **Add service** → choose the repo
-3. Set **Root Directory** to `backend`
-4. Railway auto-detects the Dockerfile
-5. Add these **Environment Variables**:
-
-| Variable | Value |
+| Input | Output |
 |---|---|
-| `GROQ_API_KEY` | `gsk_...` your key from console.groq.com |
-| `MODEL_BACKEND` | `groq` |
-| `GROQ_MODEL` | `meta-llama/llama-4-scout-17b-16e-instruct` |
+| Screenshot of any webpage | Self-contained HTML + CSS file |
+| URL of any website | Reconstructed frontend code |
+| Pasted HTML source | Styled, complete HTML page |
+| Text prompt | Custom UI from description |
 
-6. Click **Deploy** — copy the generated URL e.g. `https://ink2interface-backend.up.railway.app`
+The generated output is a **single HTML file** with all CSS embedded — open it in any browser, no dependencies needed.
 
-### Step 3 — Deploy Frontend on Railway
+---
 
-1. In the same Railway project → **New Service** → **GitHub repo** again
-2. Set **Root Directory** to `frontend`
-3. Add this **Environment Variable**:
+## Live Demo
 
-| Variable | Value |
+- **Frontend:** https://ink-2-interface.onrender.com
+- **Backend API:** https://ink2interface.onrender.com/docs
+
+---
+
+## Features
+
+- **Screenshot → Code** — upload a PNG/JPG and get the full HTML+CSS back
+- **URL → Code** — paste any URL, the backend fetches the HTML and inlines the CSS
+- **HTML Source → Code** — paste raw HTML from DevTools, get a fully styled clone
+- **Live streaming** — code streams token by token as it's generated
+- **Live preview** — see the rendered result instantly in the browser
+- **Download** — save as a single `.html` file or split `index.html` + `styles.css`
+- **Copy to clipboard** — one click copy of the full generated code
+- **1-hour TTL** — generated results auto-expire after 1 hour
+
+---
+
+## How to Use
+
+1. Open the app at https://ink-2-interface.onrender.com
+2. Choose your input mode — **Screenshot**, **HTML Source**, or **Reference URL**
+3. Upload a screenshot or paste a URL / HTML
+4. Optionally add extra instructions (e.g. "make it dark mode")
+5. Click **Generate Code**
+6. Switch between **Code** and **Preview** tabs
+7. Download or copy the result
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
 |---|---|
-| `VITE_API_URL` | `https://ink2interface-backend.up.railway.app` (your backend URL from Step 2) |
-
-4. Click **Deploy** — your frontend URL is live!
-
-### Step 4 — Done
-
-Open the frontend Railway URL in your browser. That's it.
+| Frontend | React + TypeScript + Tailwind CSS + Vite |
+| Backend | FastAPI + Python |
+| AI Model | Groq API — `llama-4-scout-17b` (vision) |
+| Deployment | Render (Docker) |
+| Streaming | Server-Sent Events (SSE) |
 
 ---
 
 ## Local Development
 
+### Backend
 ```bash
-# Backend
 cd backend
 pip install -r requirements.txt
-cp .env.example .env   # add your GROQ_API_KEY
-python main.py         # runs on http://localhost:8080
-
-# Frontend (new terminal)
-cd frontend
-npm install
-npm run dev            # runs on http://localhost:5173
+cp .env.example .env
+# Add your GROQ_API_KEY to .env
+python main.py
+# Runs on http://localhost:8080
 ```
 
-## Local Training (optional)
+### Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+# Runs on http://localhost:5173
+```
+
+Get a free Groq API key at [console.groq.com](https://console.groq.com)
+
+---
+
+## Local Model Training (Optional)
+
+Train your own local vision model on real website data using Common Crawl + WebSight.
 
 ```bash
 cd model
 pip install -r requirements.txt
 playwright install chromium
 
-# Build dataset (150 real websites)
+# Build dataset from 150 real websites
 python demo_dataset.py --priority high
 
 # Train fast tier (~6GB VRAM)
 python train.py --tier fast --pairs data/pairs --websight 0
 ```
+
+See `model/README.md` for the full training pipeline.
+
+---
+
+## Project Structure
+
+```
+Ink2Interface/
+├── backend/          # FastAPI backend + Groq AI integration
+│   ├── main.py       # API endpoints
+│   ├── generator.py  # Prompt builder + model backends
+│   └── Dockerfile
+├── frontend/         # React + Tailwind UI
+│   ├── src/
+│   │   ├── App.tsx   # Main UI
+│   │   └── api.ts    # API client with SSE streaming
+│   └── Dockerfile
+└── model/            # Local model training pipeline
+    ├── train.py      # QLoRA fine-tuning
+    ├── demo_dataset.py  # Dataset builder (150 websites)
+    ├── websites.csv  # 150 curated URLs
+    └── data_pipeline/   # Common Crawl extraction + rendering
+```
+
+---
+
+## Environment Variables
+
+### Backend
+| Variable | Description |
+|---|---|
+| `GROQ_API_KEY` | Your Groq API key from console.groq.com |
+| `MODEL_BACKEND` | `groq` (default) or `local` |
+| `GROQ_MODEL` | Model ID (default: `meta-llama/llama-4-scout-17b-16e-instruct`) |
+
+### Frontend (build time)
+| Variable | Description |
+|---|---|
+| `VITE_API_URL` | Backend URL for production (e.g. `https://ink2interface.onrender.com`) |
+
+---
+
+## License
+
+MIT
