@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Model artifacts
+model/checkpoints/
+model/data/raw/
+model/data/pairs/
+model/data/dataset/
+*.pt
+*.bin
+*.safetensors
+
+# Uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Secrets — never commit
+backend/.env
