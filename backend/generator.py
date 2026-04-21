@@ -40,17 +40,17 @@ _LOCAL_PATHS = {
 }
 
 # ── System prompt ─────────────────────────────────────────────────────────────
-SYSTEM_PROMPT = """You are an expert frontend developer. You will be given a screenshot of a webpage.
-Your task is to write a complete, self-contained HTML file that looks EXACTLY like the screenshot.
+SYSTEM_PROMPT = """You are an expert frontend developer. Your job is to produce a pixel-perfect HTML clone.
 
-RULES:
-1. Output ONLY the HTML. Start with <!DOCTYPE html> and end with </html>. Nothing else.
-2. NO markdown fences (no ```). NO explanations. NO comments.
-3. Put ALL CSS in a <style> block inside <head>. No external CSS links.
-4. Match EXACTLY: background colors, text colors, button colors, fonts, layout, spacing, borders, shadows.
-5. Use the exact colors you see — if the background is dark navy, use that exact dark navy hex.
-6. Reproduce every visible element: header, logo, form fields, buttons, links, images (use the actual src URLs).
-7. The result must look identical to the screenshot when opened in a browser."""
+RULES — NO EXCEPTIONS:
+1. Output ONLY the HTML file. Start with <!DOCTYPE html>, end with </html>. Nothing else.
+2. NO markdown fences. NO explanation. NO comments outside HTML.
+3. ALL CSS must be in a <style> block in <head>. No external links.
+4. When CSS is provided in the input — COPY IT EXACTLY into your <style> block. Do not rewrite or summarize it.
+5. When a screenshot is provided — match every color, font, spacing, layout pixel-perfectly.
+6. Preserve ALL original class names, IDs, and HTML structure from the source.
+7. Replace broken image src with the original URLs from the source HTML.
+8. The output must look identical to the original when opened in a browser."""
 
 # ── Tech-stack instructions ───────────────────────────────────────────────────
 STACK_INSTRUCTIONS: dict[str, str] = {
@@ -101,7 +101,7 @@ def _strip_fences(code: str) -> str:
 
 
 async def _fetch_html(url: str) -> str:
-    """Fetch raw HTML + inline linked CSS from a URL (best-effort, 30s timeout)."""
+    """Fetch HTML + aggressively inline ALL CSS from a URL."""
     try:
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -109,25 +109,34 @@ async def _fetch_html(url: str) -> str:
             r.raise_for_status()
             html = r.text
 
-            # Extract and inline linked CSS stylesheets (up to 5 sheets, 20K each)
-            import re as _re
             from urllib.parse import urljoin
-            css_links = _re.findall(r'<link[^>]+rel=["\']stylesheet["\'][^>]*href=["\']([^"\']+)["\']', html, _re.IGNORECASE)
-            css_links += _re.findall(r'<link[^>]+href=["\']([^"\']+)["\'][^>]*rel=["\']stylesheet["\']', html, _re.IGNORECASE)
+            # Get ALL stylesheet links
+            css_links = re.findall(r'<link[^>]+rel=["\']stylesheet["\'][^>]*href=["\']([^"\']+)["\']', html, re.IGNORECASE)
+            css_links += re.findall(r'<link[^>]+href=["\']([^"\']+)["\'][^>]*rel=["\']stylesheet["\']', html, re.IGNORECASE)
+            # Also get @import urls from inline styles
+            inline_styles = re.findall(r'<style[^>]*>([\s\S]*?)</style>', html, re.IGNORECASE)
+            for style in inline_styles:
+                imports = re.findall(r'@import\s+["\']([^"\']+)["\']', style)
+                css_links.extend(imports)
+
             inlined_css = ""
-            for href in css_links[:5]:
+            for href in css_links[:10]:  # up to 10 sheets
                 try:
                     css_url = urljoin(url, href)
-                    cr = await client.get(css_url, headers=headers, timeout=10)
+                    if not css_url.startswith("http"):
+                        continue
+                    cr = await client.get(css_url, headers=headers, timeout=15)
                     if cr.status_code == 200:
-                        inlined_css += f"\n/* === {href} === */\n{cr.text[:20_000]}\n"
+                        inlined_css += f"\n/* === {href} === */\n{cr.text[:30_000]}\n"
                 except Exception:
                     pass
 
-            result = html[:60_000]
+            # Inject all CSS as a single <style> block before </head>
             if inlined_css:
-                result += f"\n\n<!-- EXTRACTED CSS STYLESHEETS -->\n<style>\n{inlined_css[:40_000]}\n</style>"
-            return result
+                style_block = f"\n<style>\n{inlined_css[:60_000]}\n</style>\n"
+                html = html.replace("</head>", style_block + "</head>", 1) if "</head>" in html else style_block + html
+
+            return html[:80_000]
     except Exception as e:
         return f"<!-- Could not fetch {url}: {e} -->"
 
@@ -165,17 +174,18 @@ async def build_prompt(
     fetched_html = ""
     if has_url:
         fetched_html = await _fetch_html(source_url)
-    
+
     html_source = source_html if has_html else fetched_html
     if html_source.strip():
-        # Truncate to fit context
-        if len(html_source) > 30_000:
-            html_source = html_source[:28_000] + "\n<!-- truncated -->"
+        if len(html_source) > 35_000:
+            html_source = html_source[:33_000] + "\n<!-- truncated -->"
         parts.append({
             "type": "text",
             "text": (
-                f"Here is the HTML source of the page (use this for structure and text content, "
-                f"but get the visual design from the screenshot above):\n\n{html_source}"
+                f"Here is the COMPLETE HTML source including all CSS stylesheets already inlined.\n"
+                f"IMPORTANT: Copy the CSS from the <style> blocks EXACTLY into your output — do not rewrite it.\n"
+                f"Use the HTML structure as-is. Only add missing styles if needed.\n\n"
+                f"{html_source}"
             )
         })
 
